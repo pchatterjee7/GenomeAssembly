@@ -1,0 +1,118 @@
+#!/bin/bash
+
+# go to working directory
+cd /home/groupc/files/genome_assembly/QC_kat
+# Start anaconda env
+conda activate team3_genome_assembly
+
+mv ../../../data/250bp/CGT1121 ../../../data/150bp/CGT1121
+
+
+
+# fastqc/multiqc before FastP
+mkdir fastQC_on_Original
+mkdir multiQC_on_Original
+
+mkdir fastQC_on_Original/150bp
+fastqc -o fastQC_on_Original/150bp ../../../data/150bp/*/*.fq.gz
+multiqc fastQC_on_Original/150bp
+mv multiqc_data multiQC_on_Original/multiqc_results_150bp
+mv multiqc_report.html multiQC_on_Original/multiqc_results_150bp.html
+
+mkdir fastQC_on_Original/250bp
+fastqc -o fastQC_on_Original/250bp ../../../data/250bp/*/*.fq.gz
+multiqc fastQC_on_Original/250bp
+mv multiqc_data multiQC_on_Original/multiqc_results_250bp
+mv multiqc_report.html multiQC_on_Original/multiqc_results_250bp.html
+
+
+# Run FastP
+mkdir fastP_output
+
+mkdir fastP_output/150bp
+for i in `ls -1 ../../../data/150bp/*/*_1.fq.gz | sed 's/_1.fq.gz//'`; do \
+    fastp -i ${i}_1.fq.gz -I ${i}_2.fq.gz \
+    -o fastP_output/150bp/${i##*/}\_1_fastP.fq.gz -O fastP_output/150bp/${i##*/}\_2_fastP.fq.gz\
+    --correction --cut_front --cut_tail -M 30 --thread 8 -f 5 -q 25\
+    ;done
+    
+mv fastp.json fastp_150bp.json
+mv fastp.html fastp_150bp.html
+
+mkdir fastP_output/250bp
+for i in `ls -1 ../../../data/250bp/*/*_1.fq.gz | sed 's/_1.fq.gz//'`; do \
+    fastp -i ${i}_1.fq.gz -I ${i}_2.fq.gz \
+    -o fastP_output/250bp/${i##*/}\_1_fastP.fq.gz -O fastP_output/250bp/${i##*/}\_2_fastP.fq.gz\
+    --correction --cut_front --cut_tail -M 30 --thread 8 -f 5 -q 25\
+    ;done
+mv fastp.json fastp_250bp.json
+mv fastp.html fastp_250bp.html
+
+
+# fastqc/multiqc after FastP
+cd /home/groupc/files/genome_assembly/QC_kat
+mkdir fastQC_on_FastP
+mkdir multiQC_on_FastP
+
+mkdir fastQC_on_FastP/150bp
+fastqc -o fastQC_on_FastP/150bp fastP_output/150bp/*_fastP.fq.gz
+multiqc fastQC_on_FastP/150bp
+mv multiqc_data multiQC_on_FastP/multiqc_results_150bp
+mv multiqc_report.html multiQC_on_FastP/multiqc_results_150bp.html
+
+
+
+mkdir fastQC_on_FastP/250bp
+fastqc -o fastQC_on_FastP/250bp fastP_output/250bp/*_fastP.fq.gz
+multiqc fastQC_on_FastP/250bp
+mv multiqc_data multiQC_on_FastP/multiqc_results_250bp
+
+
+# idba_ud
+
+# Go to the assemblies wd
+cd /home/groupc/files/genome_assembly/idba_ud
+
+# take the gz files and uncompress them for fq2fa (which only takes uncompressed files....)
+for i in `ls -1 ../QC_kat/fastP_output/150bp/*_fastp.fq.gz | sed 's/_fastp.fq.gz//'`; do \
+    gzip -dc ${i}_fastp.fq.gz > ./${i##*/}\_fastp.fq;done
+
+for i in `ls -1 ../QC_kat/fastP_output/250bp/*_fastp.fq.gz | sed 's/*_fastp.fq.gz//'`; do \
+    gzip -dc ${i}_fastp.fq.gz > ./${i##*/}\_fastp.fq;done
+
+# make a directory so you can store the fasta files once you make them
+mkdir fasta/
+cd fasta/
+mkdir 150bp 250bp
+
+# make the fastq into fasta files and interleave them (thats the input type idba-ud accepts)
+# were going to do the 150 and 250 separately because idba-us maxk can be adjusted based on the read length.
+for i in `ls -1 ../../QC_kat/fastP_output/150bp/*_1_fastp.fq | sed 's/_1_fastp.fq//'`; do \
+    fq2fa --merge ${i}_1_fastp.fq ${i}_2_fastp.fq ./150bp/${i##*/}\_12.fas; done
+
+for i in `ls -1 ../../QC_kat/fastP_output/250bp/*_1_fastp.fq | sed 's/_1_fastp.fq//'`; do \
+    fq2fa --merge ${i}_1_fastp.fq ${i}_2_fastp.fq ./250bp/${i##*/}\_12.fas; done
+
+# make a directory so you can store the assemblies files once you make them
+cd ..
+mkdir assemblies
+cd assemblies
+mkdir 150bp 250bp
+
+# assembly time! 
+# details on the specifications:
+# -r <interleaved.fas> is the file that we are assembling
+# -o <output> is the output file 
+# --mink arg default is 20 but we do 21 for uneven k
+# --maxk arg default is 100 but the best practice is to give the smallest read length we have. Our reads are all 150 or 250 so ill give them 9 less (so 20 step works)
+# --step arg default is 20, which seems reasonable.
+# --min_contig arg default is 200, which seems reasonable.
+# you can but dont need to specify the number of threads. It will assess how many it has access to and do that!
+for i in `ls -1 ../fasta/150bp/*_12.fas | sed 's/_12.fas//'`; do \
+    idba_ud -r ${i}_12.fas -o ./150bp/${i##*/}\_idba_contigs_41_141_20_min100 --mink 41 --maxk 141 --step 20 --min_contig 100; done
+
+for i in `ls -1 ../fasta/250bp/*_12.fas | sed 's/_12.fas//'`; do \
+    idba_ud -r ${i}_12.fas -o ./250bp/${i##*/}\_idba_contigs_41_241_20 --mink 41 --maxk 241 --step 20 --min_contig 200; done
+
+
+# DONE
