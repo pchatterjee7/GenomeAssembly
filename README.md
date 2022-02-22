@@ -53,7 +53,7 @@ The resulting FASTA file will then be used for the IDBA-UD input.
 - ```--step```: increment number for increasing k-mer iterations
 - ```--min_contig```: minimum contig value
 ```bash
-idba-ud -r <read.fa> -o <output_name> --mink <#> --maxk <#> --step <#> --min_contig <#>
+idba-ud -r <read.fa> -o <output_name> --mink <num> --maxk <num> --step <num> --min_contig <num>
 ```
 IDBA-UD outputs a final contig file, a scaffolds file, and the contig file for every de Bruijn graph it made during the iteration.
 
@@ -75,7 +75,7 @@ SPAdes was initially designed for small genomes. It was tested on bacterial (bot
 - ```--isolate```: isolate mode for high-coverage isolates and multi-cell Illumina data (optional)
 - ```--careful```: careful mode that reduces number of mismatches and short indels(optional)
 ```bash
-spades.py -k <#,#,...> --<mode> -1 <read1.fq> -2 <read2.fq> -o <output_directory>
+spades.py -k <num,num,...> --<mode> -1 <read1.fq> -2 <read2.fq> -o <output_directory>
 ```
 SPAdes will store all output files in the <output_directory>, of which it will create scaffolds, contigs, assembly graphs, and paths in the assembly graph.
 ## 3. Post-quality Assessment with QUAST
@@ -85,7 +85,7 @@ QUAST is an evaluation tool for assemblies that presents several metrics with or
 - ```--min-contig```: minimum threshold for contig length
 - ```--features```: genomic feature positions in the reference genome
 ```bash
-quast.py -o <output_directory> -r <reference.fna> -min-contig <#> --features <annotation.gff>
+quast.py -o <output_directory> -r <reference.fna> -min-contig <num> --features <annotation.gff>
 ```
 This will output report files with tables of summary statistics for each sample isolate.
 ## References
