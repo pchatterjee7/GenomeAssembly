@@ -33,7 +33,7 @@ FastQC requires input fastq files and an output directory. It also allows for ex
 - ```-q```: Phred quality score
 
 ```bash
-fastp -i <read1.fq> -I <read2.fq> -o <output_name1> -O <output_name2>  
+fastp -i <read1.fq> -I <read2.fq> -o <output_name1> -O <output_name2> -M <num> -5 -3 -t <num> -q <num>  
 ```
 This will create multiple filtered fastq files and an html file containing the quality scores.
 
