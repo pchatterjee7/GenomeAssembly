@@ -1,118 +1,202 @@
-#!/bin/bash
+#usr/bin/python
+"""
+Created on Sun Feb 20 20:32:07 2022
 
-# go to working directory
-cd /home/groupc/files/genome_assembly/QC_kat
-# Start anaconda env
-conda activate team3_genome_assembly
+@author: Saideep Narendrula, HaojunSong
+"""
+import os
+import subprocess
+import argparse
 
-mv ../../../data/250bp/CGT1121 ../../../data/150bp/CGT1121
+def QC(input_dir, isolates_list, fastp_dir):
+    # input directory should be full path to input files
+    # fastp directory should be full path to fastp dir
+    # run fastp 
+    for iso in isolates_list:
+        input_path_1 = input_dir + "/" + iso + "_1.fq.gz"
+        input_path_2 = input_dir + "/" + iso + "_2.fq.gz"
+        output_path_1 = fastp_dir + "/" + iso  + "_1_fastP.fq.gz"
+        output_path_2 = fastp_dir + "/" + iso  + "_2_fastP.fq.gz"
 
-
-
-# fastqc/multiqc before FastP
-mkdir fastQC_on_Original
-mkdir multiQC_on_Original
-
-mkdir fastQC_on_Original/150bp
-fastqc -o fastQC_on_Original/150bp ../../../data/150bp/*/*.fq.gz
-multiqc fastQC_on_Original/150bp
-mv multiqc_data multiQC_on_Original/multiqc_results_150bp
-mv multiqc_report.html multiQC_on_Original/multiqc_results_150bp.html
-
-mkdir fastQC_on_Original/250bp
-fastqc -o fastQC_on_Original/250bp ../../../data/250bp/*/*.fq.gz
-multiqc fastQC_on_Original/250bp
-mv multiqc_data multiQC_on_Original/multiqc_results_250bp
-mv multiqc_report.html multiQC_on_Original/multiqc_results_250bp.html
-
-
-# Run FastP
-mkdir fastP_output
-
-mkdir fastP_output/150bp
-for i in `ls -1 ../../../data/150bp/*/*_1.fq.gz | sed 's/_1.fq.gz//'`; do \
-    fastp -i ${i}_1.fq.gz -I ${i}_2.fq.gz \
-    -o fastP_output/150bp/${i##*/}\_1_fastP.fq.gz -O fastP_output/150bp/${i##*/}\_2_fastP.fq.gz\
-    --correction --cut_front --cut_tail -M 30 --thread 8 -f 5 -q 25\
-    ;done
+        os.system("fastp -i {} -I {} -o {} -O {} --correction --cut_front --cut_tail -M 30 --thread 8 -f 5 -q 20 -e 28".format(input_path_1, input_path_2, output_path_1, output_path_2))
     
-mv fastp.json fastp_150bp.json
-mv fastp.html fastp_150bp.html
+    return fastp_dir + "/"
 
-mkdir fastP_output/250bp
-for i in `ls -1 ../../../data/250bp/*/*_1.fq.gz | sed 's/_1.fq.gz//'`; do \
-    fastp -i ${i}_1.fq.gz -I ${i}_2.fq.gz \
-    -o fastP_output/250bp/${i##*/}\_1_fastP.fq.gz -O fastP_output/250bp/${i##*/}\_2_fastP.fq.gz\
-    --correction --cut_front --cut_tail -M 30 --thread 8 -f 5 -q 25\
-    ;done
-mv fastp.json fastp_250bp.json
-mv fastp.html fastp_250bp.html
+def spades(input_dir,isolates_list, output_path):
+    # output path should be working directory and then a folder titled spades
+    os.system("cd {}".format(output_path))
+    # make the output path directory
+    os.mkdir(output_path+'/careful')
+    # make contig output path directory
+    os.mkdir(output_path+'/contigs')
+    # Run spades
+    for iso in isolates_list:
+        input_path_1 = input_dir + "/" + iso + "_1_fastP.fq.gz"
+        input_path_2 = input_dir + "/" + iso + "_2_fastP.fq.gz"
+        output_path_1 = output_path + "/careful/" + iso 
+        cmd_string = "spades.py -k 21,33,55,77  --careful  --pe1-1 {} --pe1-2 {} -o {}".format(input_path_1, input_path_2, output_path_1)
+        os.system(cmd_string)
+        
+    # Give contigs their name
+    for iso in isolates_list:
+        output_path_1 = output_path + "/careful/" + iso + "/contigs.fasta"
+        output_path_2 = output_path + "/careful/" + iso + "/${i}_contigs.fasta"
+        cmd_string = "mv {} {}".format(output_path_1,output_path_2)
+        os.system(cmd_string)
+        
+    # Move them to one folder
+    for iso in isolates_list:
+        output_path_1 = output_path + "/careful/" + iso + "/${i}_contigs.fasta"
+        output_path_2 = output_path + "/contig/" + iso         
+        cmd_string = "cp {} {}".format(output_path_1,output_path_2)
+    
+    # return location of contigs
+    return output_path + "/contig/"
 
+def idba(input_dir,isolates_list, output_path):
+    # output path should be working directory and then a folder titled idba
+    os.chdir(output_path)
+    # make the fasta path directory
+    os.mkdir("{}/fasta".format(output_path))
+    # make idba output path directory
+    os.mkdir("{}/idba_output".format(output_path))
+    # make contig output path directory
+    os.mkdir ("{}/contigs".format(output_path))
+    
+    os.system("cd {}".format(output_path + "/fasta"))
+    # Uncompress and create fasta files
+    for iso in isolates_list:
+        # take the gz files and uncompress them for fq2fa (which only takes uncompressed files....)
+        input_path_1 = input_dir + "/" + iso + "_1_fastP.fq.gz"
+        input_path_2 = input_dir + "/" + iso + "_2_fastP.fq.gz"
+        
+        output_path_1 = iso + "_1_fastP.fq"
+        output_path_2 = iso + "_2_fastP.fq"
+        
+        os.system("gzip -dc {} > {}".format(input_path_1, output_path_1))
+        os.system("gzip -dc {} > {}".format(input_path_2, output_path_2))
+        
+       
+        # make the fastq into fasta files and interleave them (thats the input type idba-ud accepts)                                
+        output_path_3 =  iso +"_12.fas"
+        os.system("fq2fa --merge {} {} {}".format(output_path_1, output_path_2, output_path_3))
+        
+    os.system("cd ..")
+    # Run IDBA-UD
+    for iso in isolates_list:
+        # run idba-ud
+        input_path_1 = "{}/fasta/{}_12.fas".format(output_path, iso) 
+        output_path_1 = "{}/idba_output/{}".format(output_path,iso) 
+        os.system("idba_ud -r {} -o {} --mink 23 --maxk 143 --step 10 --min_contig 300".format(input_path_1, output_path_1))
+        
+        # move to seperate folder
+        input_path_2 = output_path_1 + "/contig.fa"
+        output_path_2 = "{}/contigs/{}_contig.fa".format(output_path,iso)
+        os.system("cp {} {}".format(input_path_2, output_path_2))
+        
+    return output_path + "/contigs/"
+        
 
-# fastqc/multiqc after FastP
-cd /home/groupc/files/genome_assembly/QC_kat
-mkdir fastQC_on_FastP
-mkdir multiQC_on_FastP
+def megahit(input_dir,isolates_list, output_path):
+    os.system("cd {}".format(output_path))
+    # make contig output path directory
+    os.mkdir(output_path+'/contigs')
+    # Separate forward and backward strands for 150 bp
+    forward1 = ""
+    backward1 = ""
+    count1 = 0
+    total_150 = 0
+    files1 = os.listdir(input_dir)
+    for sample in files1:
+        if "_1_fastP.fq.gz" in sample and count1 == 0:
+            forward1 = sample
+            count1 += 1
+        if "_2_fastP.fq.gz" in sample and count1 == 1:
+            backward1 = sample
+            count1 += 1
+        if count1 == 2:
+            output_name = "MEGA_" + forward1[0:7]
+            #if os.path.exists("/home/groupc/files/genome_assembly/megahit/" + output_name) == True:
+            #    os.system("rm -r /home/groupc/files/genome_assembly/megahit/" + output_name)
+            os.system("megahit -1 " + input_dir + "/" + forward1 + " -2 " + input_dir +"/" + backward1 + " -o " + output_name)
+            os.system("mv " + output_name + " " + output_path + "/contigs/")
+            forward1 = ""
+            backward1 = ""
+            count1 = 0
+            total_150 += 1
+            
+    return output_path + "/contigs/"
+    
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser(
+        description='A comprehensive all in one pipeline for genome assembly',
+        epilog='The QC have to perform first if you have the raw sequence data. And this pipeline is tuned for BIOL7210 dataset. if you have trimmed dataset and only want to perform, you need to change the QC dir to designated place')
+    parser.add_argument(
+        '-i', '--input', dest="filepath", required=True, help='input folder path that are fasta files')
+    parser.add_argument(
+        '-qi', '--QCinput', dest="QCfilepath", required=False, help='input folder path that are trimmed fasta files')
+    parser.add_argument(
+        '-o', '--output', dest="output", type = str, required=True, help='output folder name')
+    parser.add_argument(
+        '-q', '--QC', dest='QC', action = 'store_true', required=False, help='will perform QC analysis if select ')
+    parser.add_argument(
+        '-a', '--assebly', dest='assembly', nargs='+', required=True, help='list the assembly that plan to use[spades, idba, megahit]')
+  
+    args = parser.parse_args()
 
-mkdir fastQC_on_FastP/150bp
-fastqc -o fastQC_on_FastP/150bp fastP_output/150bp/*_fastP.fq.gz
-multiqc fastQC_on_FastP/150bp
-mv multiqc_data multiQC_on_FastP/multiqc_results_150bp
-mv multiqc_report.html multiQC_on_FastP/multiqc_results_150bp.html
+    #getting the present working directory to perform analysis and store results
+    current_path = os.getcwd()
+    #the input dir/and isolates list used as parameter for each function
+    input_dir = args.filepath
+    #get only the isolate lists without extension
+    isolates_list = []
+    for file in os.listdir(input_dir):
+        isolates_list.append(os.path.splitext(file)[0])
+    # if trimmed data
+    QC_output = args.QCfilepath
 
-
-
-mkdir fastQC_on_FastP/250bp
-fastqc -o fastQC_on_FastP/250bp fastP_output/250bp/*_fastP.fq.gz
-multiqc fastQC_on_FastP/250bp
-mv multiqc_data multiQC_on_FastP/multiqc_results_250bp
-
-
-# idba_ud
-
-# Go to the assemblies wd
-cd /home/groupc/files/genome_assembly/idba_ud
-
-# take the gz files and uncompress them for fq2fa (which only takes uncompressed files....)
-for i in `ls -1 ../QC_kat/fastP_output/150bp/*_fastp.fq.gz | sed 's/_fastp.fq.gz//'`; do \
-    gzip -dc ${i}_fastp.fq.gz > ./${i##*/}\_fastp.fq;done
-
-for i in `ls -1 ../QC_kat/fastP_output/250bp/*_fastp.fq.gz | sed 's/*_fastp.fq.gz//'`; do \
-    gzip -dc ${i}_fastp.fq.gz > ./${i##*/}\_fastp.fq;done
-
-# make a directory so you can store the fasta files once you make them
-mkdir fasta/
-cd fasta/
-mkdir 150bp 250bp
-
-# make the fastq into fasta files and interleave them (thats the input type idba-ud accepts)
-# were going to do the 150 and 250 separately because idba-us maxk can be adjusted based on the read length.
-for i in `ls -1 ../../QC_kat/fastP_output/150bp/*_1_fastp.fq | sed 's/_1_fastp.fq//'`; do \
-    fq2fa --merge ${i}_1_fastp.fq ${i}_2_fastp.fq ./150bp/${i##*/}\_12.fas; done
-
-for i in `ls -1 ../../QC_kat/fastP_output/250bp/*_1_fastp.fq | sed 's/_1_fastp.fq//'`; do \
-    fq2fa --merge ${i}_1_fastp.fq ${i}_2_fastp.fq ./250bp/${i##*/}\_12.fas; done
-
-# make a directory so you can store the assemblies files once you make them
-cd ..
-mkdir assemblies
-cd assemblies
-mkdir 150bp 250bp
-
-# assembly time! 
-# details on the specifications:
-# -r <interleaved.fas> is the file that we are assembling
-# -o <output> is the output file 
-# --mink arg default is 20 but we do 21 for uneven k
-# --maxk arg default is 100 but the best practice is to give the smallest read length we have. Our reads are all 150 or 250 so ill give them 9 less (so 20 step works)
-# --step arg default is 20, which seems reasonable.
-# --min_contig arg default is 200, which seems reasonable.
-# you can but dont need to specify the number of threads. It will assess how many it has access to and do that!
-for i in `ls -1 ../fasta/150bp/*_12.fas | sed 's/_12.fas//'`; do \
-    idba_ud -r ${i}_12.fas -o ./150bp/${i##*/}\_idba_contigs_41_141_20_min100 --mink 41 --maxk 141 --step 20 --min_contig 100; done
-
-for i in `ls -1 ../fasta/250bp/*_12.fas | sed 's/_12.fas//'`; do \
-    idba_ud -r ${i}_12.fas -o ./250bp/${i##*/}\_idba_contigs_41_241_20 --mink 41 --maxk 241 --step 20 --min_contig 200; done
-
-
-# DONE
+    os.mkdir(current_path +'/' + args.output)
+    output_folder = current_path +'/' + args.output
+    if args.QC:
+        print('************** QC running ************')
+        os.mkdir(output_folder + '/QC')
+        QC_output = output_folder + '/QC'
+        QC(input_dir, isolates_list, QC_output )
+        print('************** QC done ************')
+    if 'spades' in args.assembly:
+        print('*************SPADES running *************')
+        os.mkdir(output_folder + '/spades')
+        spades_output = output_folder + '/spades'
+        spades(QC_output, isolates_list, spades_output)
+        print('*************SPADES done ***************')
+    if 'IDBA' in args.assembly:
+        print("***********IDBA runnings ***************")
+        os.mkdir(output_folder + '/IDBA')
+        IDBA_output = output_folder + '/IDBA'
+        idba(QC_output, isolates_list, IDBA_output)
+        print('*************IDBA done ************')
+    #if 'Mega' in args.assembly:
+    #    print('**********MEGA_hit Running************')
+    #    os.mkdir(output_folder + '/mega')
+    #    mega_output = output_folder + '/mega'
+    #    megahit(QC_output, isolates_list, mega_output)
+    #    print("**********MEGA_hit Done************")
+        
+    print('All requested runs completed')
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
