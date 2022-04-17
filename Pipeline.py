@@ -40,14 +40,14 @@ def spades(input_dir,isolates_list, output_path):
     # Give contigs their name
     for iso in isolates_list:
         output_path_1 = output_path + "/careful/" + iso + "/contigs.fasta"
-        output_path_2 = output_path + "/careful/" + iso + "/${i}_contigs.fasta"
+        output_path_2 = output_path + "/careful/" + iso + "/" + iso + "_contigs.fasta"
         cmd_string = "mv {} {}".format(output_path_1,output_path_2)
         os.system(cmd_string)
         
     # Move them to one folder
     for iso in isolates_list:
-        output_path_1 = output_path + "/careful/" + iso + "/${i}_contigs.fasta"
-        output_path_2 = output_path + "/contig/" + iso         
+        output_path_1 = output_path + "/careful/" + iso + "/" + iso + "_contigs.fasta"
+        output_path_2 = output_path + "/contigs/" 
         cmd_string = "cp {} {}".format(output_path_1,output_path_2)
     
     # return location of contigs
