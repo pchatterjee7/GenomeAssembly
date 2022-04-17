@@ -49,6 +49,7 @@ def spades(input_dir,isolates_list, output_path):
         output_path_1 = output_path + "/careful/" + iso + "/" + iso + "_contigs.fasta"
         output_path_2 = output_path + "/contigs/" 
         cmd_string = "cp {} {}".format(output_path_1,output_path_2)
+        os.system(cmd_string)
     
     # return location of contigs
     return output_path + "/contig/"
