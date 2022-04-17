@@ -149,9 +149,9 @@ if __name__ == "__main__":
     #the input dir/and isolates list used as parameter for each function
     input_dir = args.filepath
     #get only the isolate lists without extension
-    isolates_list = []
+    isolates_list = set()
     for file in os.listdir(input_dir):
-        isolates_list.append(os.path.splitext(file)[0])
+        isolates_list.add(file.split('.')[0].split('_')[0])
     # if trimmed data
     QC_output = args.QCfilepath
 
