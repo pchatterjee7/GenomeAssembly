@@ -91,8 +91,10 @@ This will output report files with tables of summary statistics for each sample 
 
 ## Results
 
-This pipeline contains the three best annotators from a comparison amongst 5 annotators (IDBA-ud, SPAdes, MEGAHIT, Abyss, and SKESA). We tested different configurations of each annotators and selected the best method for our assemblies. 
+This pipeline contains the three best annotators from a comparison amongst 5 annotators (IDBA-ud, SPAdes, MEGAHIT, Abyss, and SKESA). We tested different configurations of each annotators and selected the best method for our assemblies. Overall, SPAdes in careful mode performed the best, followed by IDBA_ud and then MEGAHIT.
 
+<img width="608" alt="Screen Shot 2022-05-02 at 12 48 47" src="https://github.gatech.edu/storage/user/57465/files/d414007e-8398-42fe-9f0c-773dfa20b6c2">
+Figure 1. Comparison of the different assembly scores, as measured by AssemblyScore = log10((AssemblySize\*N50)/NumberOfContigs).
 
 ## References
 - [FastP: an ultra-fast all-in-one FASTQ preprocessor](https://github.com/OpenGene/fastp)
