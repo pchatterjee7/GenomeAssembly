@@ -88,6 +88,12 @@ QUAST is an evaluation tool for assemblies that presents several metrics with or
 quast.py -o <output_directory> -r <reference.fna> -min-contig <num> --features <annotation.gff>
 ```
 This will output report files with tables of summary statistics for each sample isolate.
+
+## Results
+
+This pipeline contains the three best annotators from a comparison amongst 5 annotators (IDBA-ud, SPAdes, MEGAHIT, Abyss, and SKESA). We tested different configurations of each annotators and selected the best method for our assemblies. 
+
+
 ## References
 - [FastP: an ultra-fast all-in-one FASTQ preprocessor](https://github.com/OpenGene/fastp)
 - [MultiQC: a summary statistics reporting tool](https://multiqc.info/docs/)
