@@ -3,7 +3,7 @@
 
 This repository includes this README, which gives a detailed outline of the steps needed perform de novo genome assembly, and the script to a generalized genome assembly pipeline. This pipeline takes in short, paired-end reads from bacteria. A quality assessment is done before and after the assembly to ensure proper contig generations. The resulting contigs can then be used for gene prediction.
 
-**Authors**: Paramita Chatterje, Akul Chopra, Katherine Duchesneau, Xu Qiu, Saideep Narendrula, Haojun Song, Huy Tran, Joseph Tsenum
+**Authors**: Paramita Chatterjee, Akul Chopra, Katherine Duchesneau, Xu Qiu, Saideep Narendrula, Haojun Song, Huy Tran, Joseph Tsenum
 ## Installation with Conda
 This assembly uses conda to install and manage the software tools listed below. It is recommended to use this management system to easily ensure the required dependencies for the software tools are properly installed. For more information, visit https://docs.conda.io/en/latest/. 
 (Refer to the "References" section for assembly tools documentation and alternative installation methods.)
